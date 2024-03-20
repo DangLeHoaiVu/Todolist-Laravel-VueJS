@@ -1,7 +1,15 @@
 <template>
     <div>
-        <h2 class="text-2xl font-bold m-5">To do List</h2>
+        <div class="flex justify-between mr-10">
+            <h2 class="text-2xl font-bold m-5">To do List</h2>
+            <button type="button"
+                class="w-42 my-5 p-2 rounded-lg flex items-center justify-center text-gray-700 hover:bg-gray-300"
+                @click="openCreateStatusDialog()">
+                <v-icon icon="mdi-plus"></v-icon> Create status</button>
+        </div>
 
+        <CreateStatus :showDialog="isDialogCreateStatusOpen" :statuses="statuses" @create:status="handleCreateStatus"
+            @closeDialog="closeCreateStatusDialog" />
         <CreateTask :showDialog="isDialogCreateOpen" :statusId="statusIdProps" @create:task="handleCreateTask"
             @closeDialog="closeCreateDialog" />
         <TaskDetail :task="task_props_value" :showDialog="isDialogOpen" @update:task="handleUpdateTask"
@@ -33,7 +41,7 @@
                                 <p class="text-md select-none">{{ task.description }}</p>
                                 <div class="flex justify-between items-center mt-3">
                                     <p class="text-sm font-semibold text-gray-500 select-none">{{
-            formattedDate(task.start_date) }} - {{ formattedDate(task.end_date) }}</p>
+                    formattedDate(task.start_date) }} - {{ formattedDate(task.end_date) }}</p>
                                 </div>
                                 <div class="ml-5 flex justify-between items-center mt-3">
                                     <p class="text-xs font-semibold text-gray-400 select-none">Task - {{ task.id }}</p>
@@ -82,6 +90,7 @@
 <script>
 import { ref, mergeProps } from 'vue'
 import draggable from "vuedraggable";
+import CreateStatus from '../../../components/status/CreateStatus.vue';
 import TaskDetail from '../../../components/task/TaskDetail.vue';
 import CreateTask from '../../../components/task/CreateTask.vue';
 import axios from 'axios';
@@ -92,8 +101,10 @@ export default {
         const tasks = ref([])
         const users = ref([])
 
-        const isDialogCreateOpen = ref(false)
-        const statusIdProps = ref(null)
+        const isDialogCreateStatusOpen = ref(false);
+
+        const isDialogCreateOpen = ref(false);
+        const statusIdProps = ref(null);
 
         const task_props_value = ref(null);
         const isDialogOpen = ref(false);
@@ -161,9 +172,11 @@ export default {
 
         const handleChangeUserAssign = async (task, user) => {
             if (task.implementer_id !== user.id) {
+                const today = new Date().getTime()
                 try {
                     const response = await axios.put(`http://127.0.0.1:8000/api/task/${task.id}/assign`, {
                         implementer_id: user.id,
+                        update_at: today,
                     });
                     const userAssignIndex = tasks.value.findIndex((f_task) => f_task.id === task.id);
                     if (userAssignIndex !== -1 && response.status === 200) {
@@ -188,9 +201,11 @@ export default {
 
         const handleDrop = async () => {
             if (draggedTask.value.id !== null) {
+                const today = new Date().getTime()
                 try {
                     const response = await axios.put(`http://127.0.0.1:8000/api/task/${draggedTask.value.id}/status`, {
                         status_id: sourceStatusId.value,
+                        update_at: today,
                     });
                     const taskIndex = tasks.value.findIndex((task) => task.id === draggedTask.value.id);
                     if (taskIndex !== -1 && response.status === 200) {
@@ -203,6 +218,14 @@ export default {
             draggedTask.value = null;
             sourceStatusId.value = null
         };
+
+        const openCreateStatusDialog = () => {
+            isDialogCreateStatusOpen.value = true
+        }
+
+        const closeCreateStatusDialog = () => {
+            isDialogCreateStatusOpen.value = false
+        }
 
         const openCreateDialog = (status_id) => {
             statusIdProps.value = status_id
@@ -221,6 +244,32 @@ export default {
         const closeDialog = () => {
             isDialogOpen.value = false;
         };
+
+        const handleCreateStatus = async (newStatusValue) => {
+            try {
+                const responseCreateStatus = await axios.post('http://127.0.0.1:8000/api/status/createStatus', {
+                    name: newStatusValue.value.name,
+                    create_by: 2,
+                })
+                if (responseCreateStatus.status === 200) {
+                    const responseCreateStatusSetting = await axios.post('http://127.0.0.1:8000/api/status_setting/createStatusSetting', {
+                        create_by: 2,
+                        current_status: responseCreateStatus.data.data,
+                        next_status: newStatusValue.value.statusSetting
+                    })
+
+                    if (responseCreateStatusSetting.status === 200) {
+                        statuses.value.push({
+                            id: responseCreateStatus.data.data,
+                            name: newStatusValue.value.name,
+                            create_by: 2,
+                        })
+                    }
+                }
+            } catch (error) {
+                console.error('Error creating task status:', error);
+            }
+        }
 
         const handleCreateTask = async (newTaskValue) => {
             try {
@@ -265,8 +314,12 @@ export default {
                     }
                 }
             } catch (error) {
-                console.error('Error updating task status:', error);
+                console.error('Error updating task:', error);
             }
+        }
+
+        const createStatus = () => {
+            console.log('Create status');
         }
 
         return {
@@ -285,6 +338,10 @@ export default {
             mergeProps,
             sourceStatusId,
             task_props_value,
+            isDialogCreateStatusOpen,
+            openCreateStatusDialog,
+            closeCreateStatusDialog,
+            handleCreateStatus,
             openDialog,
             openCreateDialog,
             statusIdProps,
@@ -294,11 +351,13 @@ export default {
             closeDialog,
             handleCreateTask,
             handleUpdateTask,
-            formattedDate
+            formattedDate,
+            createStatus
         }
     },
     components: {
         draggable,
+        CreateStatus,
         TaskDetail,
         CreateTask
     },

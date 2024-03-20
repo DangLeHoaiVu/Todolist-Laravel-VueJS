@@ -10,4 +10,6 @@ class StatusSetting extends Model
     use HasFactory;
 
     protected $table = 'status_setting';
+
+    protected $fillable = ['current_status', 'next_status',];
 }

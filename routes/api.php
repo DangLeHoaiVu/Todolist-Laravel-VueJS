@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\StatusSettingController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskLogController;
 use Illuminate\Http\Request;
@@ -26,6 +27,10 @@ Route::get('/users', [UserController::class, 'getAllUser']);
 Route::get('/user/{id}', [UserController::class, 'getUserById']);
 
 Route::get('/status', [StatusController::class, 'getAllStatus']);
+Route::post('/status/createStatus', [StatusController::class, 'createStatus']);
+Route::delete('/status/{id}/deleteStatus', [StatusController::class, 'deleteStatus']);
+
+Route::post('/status_setting/createStatusSetting', [StatusSettingController::class, 'createStatusSetting']);
 
 Route::get('/task', [TaskController::class, 'getAllTask']);
 Route::get('/task/{id}', [TaskController::class, 'getTaskDetail']);

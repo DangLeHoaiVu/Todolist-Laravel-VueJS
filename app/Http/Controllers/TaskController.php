@@ -73,7 +73,7 @@ class TaskController extends Controller
         }
         return response()->json([
             'message' => 'Task created successfully!',
-            'task' => $task,
+            'data' => $task,
         ], 200);
     }
 
@@ -81,16 +81,20 @@ class TaskController extends Controller
     {
         $this->validate($request, [
             'status_id' => 'required|integer|exists:status,id',
+            'update_at' => 'required|integer'
         ]);
         $task = DB::table('task')->where('id', $id)->first();
 
         if (!$task) {
             return response('Task not found', 404);
         } else {
-            DB::table('task')->where('id', $id)->update(['status_id' => $request->get('status_id')]);
+            DB::table('task')->where('id', $id)->update([
+                'status_id' => $request->get('status_id'),
+                'update_at' => date('Y-m-d H:i:s', $request->input('update_at') / 1000),
+            ]);
             return response()->json([
                 'message' => 'Task update successfully!',
-                'task' => $task,
+                'data' => $task,
             ], 200);
         }
     }
@@ -99,16 +103,20 @@ class TaskController extends Controller
     {
         $this->validate($request, [
             'implementer_id' => 'required|integer|exists:users,id',
+            'update_at' => 'required|integer'
         ]);
         $task = DB::table('task')->where('id', $id)->first();
 
         if (!$task) {
             return response('Task not found', 404);
         } else {
-            DB::table('task')->where('id', $id)->update(['implementer_id' => $request->get('implementer_id')]);
+            DB::table('task')->where('id', $id)->update([
+                'implementer_id' => $request->get('implementer_id'),
+                'update_at' => date('Y-m-d H:i:s', $request->input('update_at') / 1000),
+            ]);
             return response()->json([
                 'message' => 'Task update successfully!',
-                'task' => $task,
+                'data' => $task,
             ], 200);
         }
     }
@@ -139,7 +147,7 @@ class TaskController extends Controller
             );
             return response()->json([
                 'message' => 'Task update successfully!',
-                'task' => $task,
+                'data' => $task,
             ], 200);
         }
     }
