@@ -2,6 +2,8 @@
     <div>
         <h2 class="text-2xl font-bold m-5">To do List</h2>
 
+        <CreateTask :showDialog="isDialogCreateOpen" :statusId="statusIdProps" @create:task="handleCreateTask"
+            @closeDialog="closeCreateDialog" />
         <TaskDetail :task="task_props_value" :showDialog="isDialogOpen" @update:task="handleUpdateTask"
             @closeDialog="closeDialog" />
 
@@ -13,7 +15,7 @@
 
                     <p class="text-sm font-bold text-right text-gray-500">{{ status.name.toUpperCase() }}</p>
 
-                    <div class="mt-10 mx-2">
+                    <div class="mt-10 mx-2 max-h-[500px] overflow-y-auto">
                         <div :class="{ 'bg-gray-400 rounded-full h-1 w-full': sourceStatusId === status.id }"></div>
                         <ul class="space-y-3">
                             <li v-for="(task, index) in filteredTasks(tasks, status.id)" :key="'task-' + index"
@@ -29,8 +31,12 @@
                                     </button>
                                 </div>
                                 <p class="text-md select-none">{{ task.description }}</p>
+                                <div class="flex justify-between items-center mt-3">
+                                    <p class="text-sm font-semibold text-gray-500 select-none">{{
+            formattedDate(task.start_date) }} - {{ formattedDate(task.end_date) }}</p>
+                                </div>
                                 <div class="ml-5 flex justify-between items-center mt-3">
-                                    <p class="text-sm font-semibold text-gray-500 select-none">Task - {{ task.id }}</p>
+                                    <p class="text-xs font-semibold text-gray-400 select-none">Task - {{ task.id }}</p>
                                     <div class="text-center">
                                         <v-menu>
                                             <template v-slot:activator="{ props: menu }">
@@ -62,6 +68,12 @@
                         </ul>
                     </div>
                 </div>
+                <button type="button"
+                    class="w-full mt-5 p-2 rounded-lg flex items-center justify-center text-gray-700 hover:bg-gray-300"
+                    variant="tonal" @click="openCreateDialog(status.id)">
+                    Create task
+                    <v-icon icon="mdi-plus"></v-icon>
+                </button>
             </li>
         </ul>
     </div>
@@ -71,12 +83,17 @@
 import { ref, mergeProps } from 'vue'
 import draggable from "vuedraggable";
 import TaskDetail from '../../../components/task/TaskDetail.vue';
+import CreateTask from '../../../components/task/CreateTask.vue';
+import axios from 'axios';
 
 export default {
     setup() {
         const statuses = ref([])
         const tasks = ref([])
         const users = ref([])
+
+        const isDialogCreateOpen = ref(false)
+        const statusIdProps = ref(null)
 
         const task_props_value = ref(null);
         const isDialogOpen = ref(false);
@@ -129,6 +146,15 @@ export default {
             }
         };
 
+        const formattedDate = (date_props) => {
+            if (!date_props) return null;
+            const date = new Date(date_props);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         const filteredUsers = (users) => {
             return users ? users.filter((user) => user.role !== "ADMIN") : [];
         };
@@ -178,24 +204,63 @@ export default {
             sourceStatusId.value = null
         };
 
+        const openCreateDialog = (status_id) => {
+            statusIdProps.value = status_id
+            isDialogCreateOpen.value = true
+        }
+
         const openDialog = (task_props) => {
             task_props_value.value = task_props
             isDialogOpen.value = true;
         };
 
+        const closeCreateDialog = () => {
+            isDialogCreateOpen.value = false
+        }
+
         const closeDialog = () => {
             isDialogOpen.value = false;
         };
 
+        const handleCreateTask = async (newTaskValue) => {
+            try {
+                const response = await axios.post('http://127.0.0.1:8000/api/task/createTask', {
+                    title: newTaskValue.value.title,
+                    description: newTaskValue.value.description,
+                    status_id: newTaskValue.value.status_id,
+                    create_by: 2,
+                    start_date: newTaskValue.value.start_date,
+                    end_date: newTaskValue.value.end_date,
+                })
+                if (response.status == 200) {
+                    tasks.value.push(newTaskValue.value)
+                }
+            } catch (error) {
+                console.error('Error creating task status:', error);
+            }
+        }
+
         const handleUpdateTask = async (newTaskValue) => {
             try {
                 if (task_props_value.value !== newTaskValue.value) {
-                    const response = await axios.put(`http://127.0.0.1:8000/api/task/${newTaskValue.value.id}/updateDetail`, {
+                    const today = new Date().getTime()
+                    const response = await axios.put(`http://127.0.0.1:8000/api/task/${newTaskValue.value.id}/updateDetailTask`, {
                         title: newTaskValue.value.title,
                         description: newTaskValue.value.description,
+                        start_date: newTaskValue.value.start_date,
+                        end_date: newTaskValue.value.end_date,
+                        update_at: today,
                     });
                     const taskIndex = tasks.value.findIndex((task) => task.id === newTaskValue.value.id);
                     if (taskIndex !== -1 && response.status === 200) {
+                        const set_new_start_date = new Date(newTaskValue.value.start_date)
+                        set_new_start_date.setDate(set_new_start_date.getDate() - 1)
+                        newTaskValue.value.start_date = set_new_start_date
+
+                        const set_new_end_date = new Date(newTaskValue.value.end_date)
+                        set_new_end_date.setDate(set_new_end_date.getDate() - 1)
+                        newTaskValue.value.end_date = set_new_end_date
+
                         tasks.value[taskIndex] = newTaskValue.value;
                     }
                 }
@@ -221,14 +286,21 @@ export default {
             sourceStatusId,
             task_props_value,
             openDialog,
+            openCreateDialog,
+            statusIdProps,
+            isDialogCreateOpen,
+            closeCreateDialog,
             isDialogOpen,
             closeDialog,
-            handleUpdateTask
+            handleCreateTask,
+            handleUpdateTask,
+            formattedDate
         }
     },
     components: {
         draggable,
         TaskDetail,
+        CreateTask
     },
 };
 </script>

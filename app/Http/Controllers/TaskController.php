@@ -46,13 +46,38 @@ class TaskController extends Controller
         return response()->json($task);
     }
 
-    public function createTask(Request $request): Response
+    public function createTask(Request $request): JsonResponse
     {
-        $task = Task::create($request->all());
-        return response($task);
+        $this->validate($request, [
+            'title' => 'required|string',
+            'description' => 'required|string',
+            'status_id' => 'required|integer|exists:status,id',
+            'create_by' => 'required|integer|exists:users,id',
+            'start_date' => 'required|integer',
+            'end_date' => 'required|integer',
+        ]);
+        try {
+            $task =
+                DB::table('task')->insertGetId([
+                    'title' => $request->input('title'),
+                    'description' => $request->input('description'),
+                    'status_id' => $request->input('status_id'),
+                    'create_by' => $request->input('create_by'),
+                    'start_date' => date('Y-m-d H:i:s', $request->input('start_date') / 1000),
+                    'end_date' => date('Y-m-d H:i:s', $request->input('end_date') / 1000),
+                ]);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['message' => 'Failed to create task: ' . $e->getMessage()], 500);
+        }
+        return response()->json([
+            'message' => 'Task created successfully!',
+            'task' => $task,
+        ], 200);
     }
 
-    public function updateTaskStatus(Request $request, int $id): Response
+    public function updateTaskStatus(Request $request, int $id): JsonResponse
     {
         $this->validate($request, [
             'status_id' => 'required|integer|exists:status,id',
@@ -63,11 +88,14 @@ class TaskController extends Controller
             return response('Task not found', 404);
         } else {
             DB::table('task')->where('id', $id)->update(['status_id' => $request->get('status_id')]);
-            return response('Task updated successfully!', 200);
+            return response()->json([
+                'message' => 'Task update successfully!',
+                'task' => $task,
+            ], 200);
         }
     }
 
-    public function updateUserAssign(Request $request, int $id): Response
+    public function updateUserAssign(Request $request, int $id): JsonResponse
     {
         $this->validate($request, [
             'implementer_id' => 'required|integer|exists:users,id',
@@ -78,15 +106,21 @@ class TaskController extends Controller
             return response('Task not found', 404);
         } else {
             DB::table('task')->where('id', $id)->update(['implementer_id' => $request->get('implementer_id')]);
-            return response('Task updated successfully!', 200);
+            return response()->json([
+                'message' => 'Task update successfully!',
+                'task' => $task,
+            ], 200);
         }
     }
 
-    public function updateDetailTask(Request $request, int $id): Response
+    public function updateDetailTask(Request $request, int $id): JsonResponse
     {
         $this->validate($request, [
             'title' => 'required|string',
             'description' => 'required|string',
+            'start_date' => 'required|integer',
+            'end_date' => 'required|integer',
+            'update_at' => 'required|integer'
         ]);
 
         $task = DB::table('task')->where('id', $id)->first();
@@ -97,10 +131,16 @@ class TaskController extends Controller
             DB::table('task')->where('id', $id)->update(
                 [
                     'title' => $request->get('title'),
-                    'description' => $request->get('description')
+                    'description' => $request->get('description'),
+                    'start_date' => date('Y-m-d H:i:s', $request->input('start_date') / 1000),
+                    'end_date' => date('Y-m-d H:i:s', $request->input('end_date') / 1000),
+                    'update_at' => date('Y-m-d H:i:s', $request->input('update_at') / 1000),
                 ]
             );
-            return response('Task updated successfully!', 200);
+            return response()->json([
+                'message' => 'Task update successfully!',
+                'task' => $task,
+            ], 200);
         }
     }
 }

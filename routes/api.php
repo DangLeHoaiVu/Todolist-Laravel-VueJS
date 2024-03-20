@@ -31,6 +31,7 @@ Route::get('/task', [TaskController::class, 'getAllTask']);
 Route::get('/task/{id}', [TaskController::class, 'getTaskDetail']);
 Route::put('/task/{id}/status', [TaskController::class, 'updateTaskStatus']);
 Route::put('/task/{id}/assign', [TaskController::class, 'updateUserAssign']);
-Route::put('/task/{id}/updateDetail', [TaskController::class, 'updateDetailTask']);
+Route::post('/task/createTask', [TaskController::class, 'createTask']);
+Route::put('/task/{id}/updateDetailTask', [TaskController::class, 'updateDetailTask']);
 
 Route::get('/task_log', [TaskLogController::class, 'getAllTaskLog']);
