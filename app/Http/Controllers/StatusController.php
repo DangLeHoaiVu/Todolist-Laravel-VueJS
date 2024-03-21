@@ -45,17 +45,18 @@ class StatusController extends Controller
         ], 200);
     }
 
-    public function deleteStatus(Request $request, int $id): JsonResponse
+    public function deleteStatus(string $id): JsonResponse
     {
-        $idToDelete = $request->input('id');
-        $tasksCount = DB::table('task')->where('status_id', $idToDelete)->count();
-
-        //TODO: Delete status_setting first
+        $tasksCount = DB::table('task')->where('status_id', intval($id))->count();
 
         if ($tasksCount > 0) {
             return response()->json(['message' => 'Cannot delete status as it is associated with tasks'], 400);
         }
-        DB::table('status')->where('id', $idToDelete)->delete();
+        DB::table('status_setting')
+            ->where('next_status', intval($id))
+            ->orWhere('current_status', intval($id))
+            ->delete();
+        DB::table('status')->where('id', intval($id))->delete();
         return response()->json(['message' => 'Status deleted successfully'], 200);
     }
 }

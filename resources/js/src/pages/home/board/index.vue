@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="mb-10">
         <div class="flex justify-between mr-10">
             <h2 class="text-2xl font-bold m-5">To do List</h2>
             <button type="button"
@@ -8,20 +8,54 @@
                 <v-icon icon="mdi-plus"></v-icon> Create status</button>
         </div>
 
+        <template>
+            <div class="text-center">
+                <v-snackbar v-model="snakeBarValue.snakeBar" :timeout="snakeBarValue.timeout">
+                    {{ snakeBarValue.text }}
+                    <template v-slot:actions>
+                        <v-btn color="red" variant="text" @click="snakeBarValue.snakeBar = false">
+                            Close
+                        </v-btn>
+                    </template>
+                </v-snackbar>
+            </div>
+        </template>
+
         <CreateStatus :showDialog="isDialogCreateStatusOpen" :statuses="statuses" @create:status="handleCreateStatus"
             @closeDialog="closeCreateStatusDialog" />
         <CreateTask :showDialog="isDialogCreateOpen" :statusId="statusIdProps" @create:task="handleCreateTask"
             @closeDialog="closeCreateDialog" />
         <TaskDetail :task="task_props_value" :showDialog="isDialogOpen" @update:task="handleUpdateTask"
             @closeDialog="closeDialog" />
+        <ConfirmPopUp :showDialog="isDialogConfirmOpen" :confirmDataProps="confirmDataProps"
+            @submit:confirm="handleActionStatus" @closeDialog="closeConfirmDialog" />
 
-        <ul class="grid grid-cols-4 gap-3 mx-3">
+        <ul class=" grid grid-cols-4 gap-3 mx-3">
             <li v-for="status in statuses" :key="status.id + 'Status'"
                 class="col-span-1 min-h-40 bg-gray-200 py-3 px-5 rounded-md" @drop="handleDrop"
                 @dragenter.prevent="handleDragEnter(status.id)" @dragover.prevent>
                 <div>
 
-                    <p class="text-sm font-bold text-right text-gray-500">{{ status.name.toUpperCase() }}</p>
+                    <div class="flex justify-between items-center">
+                        <v-menu :location="end">
+                            <template v-slot:activator="{ props }">
+                                <button type="button" v-bind="props" class="p-2 rounded-lg group hover:bg-gray-300">
+                                    <v-icon icon="mdi-dots-horizontal"></v-icon>
+                                </button>
+                            </template>
+                            <v-list class="max-h-52 overflow-y-auto">
+                                <v-list-item v-for="item in items" :key="item.value"
+                                    class="cursor-pointer hover:bg-gray-200"
+                                    @click="openConfirmDialog(item.value, status.id)">
+                                    <v-list-item-title>
+                                        {{ item.title }}
+                                    </v-list-item-title>
+                                </v-list-item>
+                            </v-list>
+                        </v-menu>
+
+                        <p class="text-sm font-bold text-gray-500">{{ status.name.toUpperCase() }}</p>
+                    </div>
 
                     <div class="mt-10 mx-2 max-h-[500px] overflow-y-auto">
                         <div :class="{ 'bg-gray-400 rounded-full h-1 w-full': sourceStatusId === status.id }"></div>
@@ -93,9 +127,15 @@ import draggable from "vuedraggable";
 import CreateStatus from '../../../components/status/CreateStatus.vue';
 import TaskDetail from '../../../components/task/TaskDetail.vue';
 import CreateTask from '../../../components/task/CreateTask.vue';
+import ConfirmPopUp from '../../../components/ConfirmPopUp.vue';
 import axios from 'axios';
 
 export default {
+    data: () => ({
+        items: [
+            { title: 'Delete', value: 'DELETE_STATUS' },
+        ],
+    }),
     setup() {
         const statuses = ref([])
         const tasks = ref([])
@@ -113,6 +153,20 @@ export default {
         const dragging = ref(false)
         const draggedTask = ref(null);
         const sourceStatusId = ref(null);
+
+        const isDialogConfirmOpen = ref(false);
+        const confirmDataProps = ref({
+            title: '',
+            content: '',
+            action: '',
+            data: null
+        })
+
+        const snakeBarValue = ref({
+            text: '',
+            snakeBar: false,
+            timeout: 2000,
+        })
 
         const getStatus = async () => {
             try {
@@ -219,6 +273,18 @@ export default {
             sourceStatusId.value = null
         };
 
+        const openConfirmDialog = (action, payload) => {
+            confirmDataProps.value.title = 'Delete status'
+            confirmDataProps.value.content = `Do you want to delete ${payload.name}`
+            confirmDataProps.value.action = action
+            confirmDataProps.value.data = payload
+            isDialogConfirmOpen.value = true
+        }
+
+        const closeConfirmDialog = () => {
+            isDialogConfirmOpen.value = false
+        }
+
         const openCreateStatusDialog = () => {
             isDialogCreateStatusOpen.value = true
         }
@@ -244,6 +310,26 @@ export default {
         const closeDialog = () => {
             isDialogOpen.value = false;
         };
+
+        const handleActionStatus = async (payload) => {
+            switch (payload.action) {
+                case "DELETE_STATUS":
+                    try {
+                        const response = await axios.delete(`http://127.0.0.1:8000/api/status/${payload.data}/deleteStatus`)
+                        if (response.status === 200) {
+                            statuses.value = statuses.value.filter(status => status.id !== payload.data)
+                        }
+
+                    } catch (error) {
+                        console.error('Error creating task status:', error);
+                        snakeBarValue.value.text = error.response.data.message
+                        snakeBarValue.value.snakeBar = true
+                    }
+                default: {
+                    console.log(payload.action);
+                }
+            }
+        }
 
         const handleCreateStatus = async (newStatusValue) => {
             try {
@@ -326,6 +412,7 @@ export default {
             statuses,
             tasks,
             users,
+            snakeBarValue,
             enabled,
             dragging,
             filteredTasks,
@@ -336,6 +423,7 @@ export default {
             handleDragEnter,
             handleDrop,
             mergeProps,
+            handleActionStatus,
             sourceStatusId,
             task_props_value,
             isDialogCreateStatusOpen,
@@ -345,6 +433,10 @@ export default {
             openDialog,
             openCreateDialog,
             statusIdProps,
+            confirmDataProps,
+            isDialogConfirmOpen,
+            openConfirmDialog,
+            closeConfirmDialog,
             isDialogCreateOpen,
             closeCreateDialog,
             isDialogOpen,
@@ -359,7 +451,8 @@ export default {
         draggable,
         CreateStatus,
         TaskDetail,
-        CreateTask
+        CreateTask,
+        ConfirmPopUp
     },
 };
 </script>
