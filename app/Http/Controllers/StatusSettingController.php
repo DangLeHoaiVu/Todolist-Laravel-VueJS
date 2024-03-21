@@ -2,13 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\StatusSetting;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class StatusSettingController extends Controller
 {
+    public function getAllStatusSetting(): Response
+    {
+        $status_settings = DB::table('status_setting')
+            ->join('status as current_status', 'current_status.id', '=', 'status_setting.current_status')
+            ->join('status as next_status', 'next_status.id', '=', 'status_setting.next_status')
+            ->select(
+                'status_setting.*',
+                'current_status.name as current_status_name',
+                'next_status.name as next_status_name',
+            )
+            ->get();
+
+        return response($status_settings);
+    }
     public function createStatusSetting(Request $request): JsonResponse
     {
         try {

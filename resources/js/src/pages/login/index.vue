@@ -3,12 +3,12 @@
         <div class="bg-white shadow-2xl p-10 space-y-5 rounded-lg">
             <h1 class="text-center font-bold text-xl">Welcome back!</h1>
             <v-sheet class="mx-auto" width="300">
-                <v-form fast-fail @submit.prevent>
-                    <v-text-field v-model="username" :rules="usernameRules" label="Username"></v-text-field>
+                <v-form fast-fail ref="form" @submit.prevent="login">
+                    <v-text-field v-model="email" :rules="emailRules" label="Email"></v-text-field>
 
                     <v-text-field v-model="password" :rules="passwordRules" type="password"
                         label="Password"></v-text-field>
-
+                    <p v-if="errorMessage" class="text-red-600">{{ errorMessage }}</p>
                     <v-btn class="mt-2" type="submit" block>Submit</v-btn>
                 </v-form>
             </v-sheet>
@@ -19,15 +19,16 @@
 <script>
 export default {
     data: () => ({
-        username: '',
-        usernameRules: [
-            v => !!v || 'Username is required',
-            v => (v && v.length <= 20) || 'Username must be less than 20 characters',
+        email: '',
+        emailRules: [
+            v => !!v || 'Email is required',
+            v => (v && v.length <= 20) || 'Email must be less than 20 characters',
         ],
         password: '',
         passwordRules: [
             v => !!v || 'Password is required',
         ],
+        errorMessage: '',
     }),
 
     methods: {
@@ -41,6 +42,27 @@ export default {
         },
         resetValidation() {
             this.$refs.form.resetValidation()
+        },
+
+        async login() {
+            try {
+                const response = await axios.post('http://127.0.0.1:8000/api/login', {
+                    email: this.email,
+                    password: this.password
+                });
+                const token = response.data.token;
+
+                localStorage.setItem('token', token);
+
+                this.$router.push('/home/board');
+            } catch (error) {
+                console.error('Error logging in:', error);
+                if (error.response.status === 401) {
+                    this.errorMessage = 'Wrong email or password.';
+                } else {
+                    this.errorMessage = 'An error occurred. Please try again later.';
+                }
+            }
         },
     },
 }

@@ -140,6 +140,7 @@ export default {
         const statuses = ref([])
         const tasks = ref([])
         const users = ref([])
+        const statusSettings = ref([])
 
         const isDialogCreateStatusOpen = ref(false);
 
@@ -195,9 +196,19 @@ export default {
             }
         }
 
+        const getStatusSettings = async () => {
+            try {
+                const response = await axios.get('http://127.0.0.1:8000/api/status_settings');
+                statusSettings.value = response.data
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
         getStatus();
         getTasks();
         getUsers();
+        getStatusSettings();
 
         const filteredTasks = (tasks, statusId) => {
             return tasks ? tasks.filter((task) => task.status_id === statusId) : [];
@@ -254,23 +265,46 @@ export default {
         };
 
         const handleDrop = async () => {
-            if (draggedTask.value.id !== null) {
-                const today = new Date().getTime()
-                try {
-                    const response = await axios.put(`http://127.0.0.1:8000/api/task/${draggedTask.value.id}/status`, {
-                        status_id: sourceStatusId.value,
-                        update_at: today,
-                    });
-                    const taskIndex = tasks.value.findIndex((task) => task.id === draggedTask.value.id);
-                    if (taskIndex !== -1 && response.status === 200) {
-                        tasks.value[taskIndex].status_id = sourceStatusId.value;
+            const isStatusMatch = statusSettings.value
+                .some(statusSetting => {
+                    return (draggedTask.value.status_id == statusSetting.current_status &&
+                        sourceStatusId.value == statusSetting.next_status) ||
+                        (sourceStatusId.value == statusSetting.current_status &&
+                            draggedTask.value.status_id == statusSetting.next_status);
+                })
+
+            if (!isStatusMatch) {
+                const statusSettingFlow = statusSettings.value.map(statusSetting => {
+                    if (draggedTask.value.status_id == statusSetting.current_status) {
+                        return `${draggedTask.value.status_name} -> ${statusSetting.next_status_name}`;
                     }
-                } catch (error) {
-                    console.error('Error updating task status:', error);
+                    return null
+                }).filter(value => value !== null);
+
+                snakeBarValue.value.text = `Status can follow this flow [ ${statusSettingFlow.join(' || ')} ] and oppsite`;
+                snakeBarValue.value.snakeBar = true;
+                snakeBarValue.value.timeout = 30000;
+            } else {
+                if (draggedTask.value.id !== null) {
+                    const today = new Date().getTime()
+                    try {
+                        const response = await axios.put(`http://127.0.0.1:8000/api/task/${draggedTask.value.id}/status`, {
+                            status_id: sourceStatusId.value,
+                            update_at: today,
+                        });
+                        const taskIndex = tasks.value.findIndex((task) => task.id === draggedTask.value.id);
+                        if (taskIndex !== -1 && response.status === 200) {
+                            // tasks.value[taskIndex].status_id = sourceStatusId.value;
+                            await getTasks()
+                        }
+                    } catch (error) {
+                        console.error('Error updating task status:', error);
+                    }
                 }
             }
             draggedTask.value = null;
             sourceStatusId.value = null
+
         };
 
         const openConfirmDialog = (action, payload) => {
@@ -324,6 +358,7 @@ export default {
                         console.error('Error creating task status:', error);
                         snakeBarValue.value.text = error.response.data.message
                         snakeBarValue.value.snakeBar = true
+                        snakeBarValue.value.timeout = 5000
                     }
                 default: {
                     console.log(payload.action);
@@ -345,11 +380,13 @@ export default {
                     })
 
                     if (responseCreateStatusSetting.status === 200) {
-                        statuses.value.push({
-                            id: responseCreateStatus.data.data,
-                            name: newStatusValue.value.name,
-                            create_by: 2,
-                        })
+                        // statuses.value.push({
+                        //     id: responseCreateStatus.data.data,
+                        //     name: newStatusValue.value.name,
+                        //     create_by: 2,
+                        // })
+                        await getStatus();
+                        await getStatusSettings();
                     }
                 }
             } catch (error) {
@@ -404,14 +441,11 @@ export default {
             }
         }
 
-        const createStatus = () => {
-            console.log('Create status');
-        }
-
         return {
             statuses,
             tasks,
             users,
+            statusSettings,
             snakeBarValue,
             enabled,
             dragging,
@@ -443,8 +477,7 @@ export default {
             closeDialog,
             handleCreateTask,
             handleUpdateTask,
-            formattedDate,
-            createStatus
+            formattedDate
         }
     },
     components: {

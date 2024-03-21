@@ -30,6 +30,7 @@ Route::get('/status', [StatusController::class, 'getAllStatus']);
 Route::post('/status/createStatus', [StatusController::class, 'createStatus']);
 Route::delete('/status/{id}/deleteStatus', [StatusController::class, 'deleteStatus']);
 
+Route::get('/status_settings', [StatusSettingController::class, 'getAllStatusSetting']);
 Route::post('/status_setting/createStatusSetting', [StatusSettingController::class, 'createStatusSetting']);
 
 Route::get('/task', [TaskController::class, 'getAllTask']);
