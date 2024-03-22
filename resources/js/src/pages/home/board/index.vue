@@ -122,13 +122,14 @@
 </template>
 
 <script>
-import { ref, mergeProps } from 'vue'
+import { ref, computed, mergeProps } from 'vue'
 import draggable from "vuedraggable";
 import CreateStatus from '../../../components/status/CreateStatus.vue';
 import TaskDetail from '../../../components/task/TaskDetail.vue';
 import CreateTask from '../../../components/task/CreateTask.vue';
 import ConfirmPopUp from '../../../components/ConfirmPopUp.vue';
 import axios from 'axios';
+import { useStore } from 'vuex';
 
 export default {
     data: () => ({
@@ -137,6 +138,10 @@ export default {
         ],
     }),
     setup() {
+
+        const store = useStore();
+        const user = computed(() => store.state.user);
+
         const statuses = ref([])
         const tasks = ref([])
         const users = ref([])
@@ -370,11 +375,11 @@ export default {
             try {
                 const responseCreateStatus = await axios.post('http://127.0.0.1:8000/api/status/createStatus', {
                     name: newStatusValue.value.name,
-                    create_by: 2,
+                    create_by: user.value.id,
                 })
                 if (responseCreateStatus.status === 200) {
                     const responseCreateStatusSetting = await axios.post('http://127.0.0.1:8000/api/status_setting/createStatusSetting', {
-                        create_by: 2,
+                        create_by: user.value.id,
                         current_status: responseCreateStatus.data.data,
                         next_status: newStatusValue.value.statusSetting
                     })
@@ -400,12 +405,13 @@ export default {
                     title: newTaskValue.value.title,
                     description: newTaskValue.value.description,
                     status_id: newTaskValue.value.status_id,
-                    create_by: 2,
+                    create_by: user.value.id,
                     start_date: newTaskValue.value.start_date,
                     end_date: newTaskValue.value.end_date,
                 })
                 if (response.status == 200) {
-                    tasks.value.push(newTaskValue.value)
+                    // tasks.value.push(newTaskValue.value)
+                    await getTasks()
                 }
             } catch (error) {
                 console.error('Error creating task status:', error);

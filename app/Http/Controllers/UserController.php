@@ -26,11 +26,22 @@ class UserController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            $token = JWTAuth::fromUser($user);
-            return response()->json(['token' => $token], 200);
+        if (!$token = JWTAuth::attempt($credentials)) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
-        return response()->json(['message' => 'Unauthorized'], 401);
+
+        $user = User::where('email', $request->email)->first();
+
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+        ];
+
+        return response()->json([
+            'token' => $token,
+            'user' => $userData
+        ]);
     }
 }

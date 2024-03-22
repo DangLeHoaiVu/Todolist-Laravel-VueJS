@@ -17,6 +17,9 @@
 </template>
 
 <script>
+import authenticated from '../../store/authenticated'
+import { jwtDecode } from "jwt-decode";
+
 export default {
     data: () => ({
         email: '',
@@ -50,20 +53,27 @@ export default {
                     email: this.email,
                     password: this.password
                 });
-                const token = response.data.token;
+                const data = response.data;
 
-                localStorage.setItem('token', token);
+                if (data) {
+                    const userData = data.user;
+                    const tokenUserData = `${data.token}.user:${JSON.stringify(userData)}`;
 
-                this.$router.push('/home/board');
+                    authenticated.dispatch('login', data.user);
+                    localStorage.setItem('hashedTokenUserData', tokenUserData);
+                    this.$router.push('/home/board');
+                } else {
+                    throw new Error('Token not found in response data');
+                }
             } catch (error) {
                 console.error('Error logging in:', error);
-                if (error.response.status === 401) {
+                if (error.response && error.response.status === 401) {
                     this.errorMessage = 'Wrong email or password.';
                 } else {
                     this.errorMessage = 'An error occurred. Please try again later.';
                 }
             }
-        },
+        }
     },
 }
 </script>

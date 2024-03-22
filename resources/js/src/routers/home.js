@@ -13,7 +13,7 @@ const home = [
                 name: "home-issues",
                 component: () => import("../pages/home/issues/index.vue")
             }
-        ]
+        ],
     }
 ]
 
