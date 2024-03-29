@@ -2,14 +2,14 @@
     <v-card>
         <v-layout>
             <v-navigation-drawer class="bg-deep-purple" theme="dark" permanent>
-                <h1 class="text-3xl font-extrabold text-white mx-5 my-5">Task Manager</h1>
+                <h1 class="text-3xl font-extrabold text-white mx-5 my-5">{{ data.title }}</h1>
                 <v-list>
-                    <router-link :to="{ name: 'home-board' }">
-                        <v-list-item prepend-icon="mdi-view-dashboard" title="Dashboard" value="dashboard">
+
+                    <router-link v-for="(item, index) in data.item" :key="index" :to="{ name: item.name }">
+                        <v-list-item :value="item.title.toLowerCase()">
+                            <v-icon>{{ item.icon }}</v-icon>
+                            {{ item.title }}
                         </v-list-item>
-                    </router-link>
-                    <router-link :to="{ name: 'home-issues' }">
-                        <v-list-item prepend-icon="mdi-clipboard-check" title="Issues" value="issues"></v-list-item>
                     </router-link>
                 </v-list>
 
@@ -32,11 +32,29 @@
 </template>
 
 <script>
+import { ref, watch } from 'vue';
 import Header from "../components/Header.vue";
 
 export default {
-    components: {
+    props: {
+        data: {
+            type: Object,
+            required: true,
+            default: { title: '', item: [{ name: '', title: '', icon: '' }] }
+        },
+    },
+    setup(props) {
+        const data = ref(props.data)
+
+        watch(() => props.data, newVal => {
+            data.value = newVal
+        })
+
+        return {
+            data
+        }
+    }, components: {
         Header
-    }
+    },
 }
 </script>

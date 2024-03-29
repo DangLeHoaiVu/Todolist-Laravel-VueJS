@@ -18,7 +18,6 @@
 
 <script>
 import authenticated from '../../store/authenticated'
-import { jwtDecode } from "jwt-decode";
 
 export default {
     data: () => ({
@@ -60,8 +59,12 @@ export default {
                     const tokenUserData = `${data.token}.user:${JSON.stringify(userData)}`;
 
                     authenticated.dispatch('login', data.user);
-                    localStorage.setItem('hashedTokenUserData', tokenUserData);
-                    this.$router.push('/home/board');
+                    localStorage.setItem('accessToken', tokenUserData);
+                    if (data.user.role === "ADMIN") {
+                        this.$router.push('/admin/users');
+                    } else {
+                        this.$router.push('/home/board');
+                    }
                 } else {
                     throw new Error('Token not found in response data');
                 }

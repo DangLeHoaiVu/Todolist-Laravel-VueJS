@@ -1,5 +1,5 @@
 <template>
-    <Sidebar />
+    <Sidebar :data="sidebarData" />
 </template>
 
 <script>
@@ -10,6 +10,23 @@ export default {
     components: {
         Header,
         Sidebar
+    },
+    data() {
+        return {
+            sidebarData: {
+                title: 'Task Manager',
+                item: [{
+                    name: 'home-board',
+                    title: 'Dashboard',
+                    icon: 'mdi-view-dashboard'
+                }, {
+                    name: 'home-issues',
+                    title: 'Issues',
+                    icon: 'mdi-clipboard-check'
+                },
+                ]
+            }
+        }
     }
 }
 </script>
